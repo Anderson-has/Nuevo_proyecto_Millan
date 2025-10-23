@@ -52,6 +52,31 @@ export class VectorOperationsService {
     }
   }
 
+  // RF-008: Multiplicación por escalar
+  multiplicarPorEscalar(v: Vector3D, escalar: number): ResultadoOperacion {
+    const resultado = new Vector3D(
+      v.x * escalar,
+      v.y * escalar,
+      v.z * escalar,
+      `${escalar} × ${v.nombre || "A"}`,
+    )
+
+    const pasos = [
+      `Vector: ${v.toString()}`,
+      `Escalar: ${escalar}`,
+      `Componente X: ${v.x} × ${escalar} = ${resultado.x}`,
+      `Componente Y: ${v.y} × ${escalar} = ${resultado.y}`,
+      `Componente Z: ${v.z} × ${escalar} = ${resultado.z}`,
+      `Resultado: ${resultado.toString()}`,
+    ]
+
+    return {
+      resultado,
+      pasos,
+      explicacion: "La multiplicación por escalar se realiza multiplicando cada componente por el escalar.",
+    }
+  }
+
   // RF-008: Producto escalar (dot product)
   productoEscalar(v1: Vector3D, v2: Vector3D): ResultadoOperacion {
     const resultado = v1.x * v2.x + v1.y * v2.y + v1.z * v2.z
