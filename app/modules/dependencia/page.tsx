@@ -39,11 +39,34 @@ export default function DependenciaPage() {
   const [resultado, setResultado] = useState<any>(null)
 
   useEffect(() => {
-    if (canvasRef.current) {
-      const newRenderer = new CanvasRenderer(canvasRef.current)
-      newRenderer.renderizarEscena()
-      setRenderer(newRenderer)
+    const initializeCanvas = () => {
+      if (canvasRef.current) {
+        const canvas = canvasRef.current
+        console.log("Inicializando canvas dependencia...", canvas)
+        
+        // Asegurar que el canvas tenga el tamaño correcto
+        canvas.width = 600
+        canvas.height = 600
+        
+        try {
+          const newRenderer = new CanvasRenderer(canvas)
+          console.log("Renderer dependencia creado:", newRenderer)
+          newRenderer.renderizarEscena()
+          console.log("Escena dependencia renderizada")
+          setRenderer(newRenderer)
+        } catch (error) {
+          console.error("Error al crear renderer dependencia:", error)
+        }
+      }
     }
+
+    // Intentar inicializar inmediatamente
+    initializeCanvas()
+    
+    // También intentar después de un pequeño delay
+    const timer = setTimeout(initializeCanvas, 500)
+    
+    return () => clearTimeout(timer)
   }, [])
 
   const agregarVector = () => {
@@ -90,12 +113,37 @@ export default function DependenciaPage() {
 
     // Visualize vectors
     if (renderer) {
+      console.log("Renderizando vectores en canvas dependencia...")
       renderer.limpiar()
       renderer.renderizarEscena()
 
       vectoresValidos.forEach((vec, i) => {
+        console.log(`Dibujando vector ${i + 1}:`, vec.toString())
         renderer.dibujarVector(vec, vectores[i].color)
       })
+      console.log("Vectores renderizados exitosamente")
+    } else {
+      console.log("Renderer no disponible, intentando reinicializar...")
+      // Intentar reinicializar el renderer
+      if (canvasRef.current) {
+        const canvas = canvasRef.current
+        canvas.width = 600
+        canvas.height = 600
+        
+        try {
+          const newRenderer = new CanvasRenderer(canvas)
+          newRenderer.renderizarEscena()
+          setRenderer(newRenderer)
+          
+          // Dibujar vectores con el nuevo renderer
+          vectoresValidos.forEach((vec, i) => {
+            newRenderer.dibujarVector(vec, vectores[i].color)
+          })
+          console.log("Renderer reinicializado y vectores dibujados")
+        } catch (error) {
+          console.error("Error al reinicializar renderer:", error)
+        }
+      }
     }
 
     if (progreso && !progreso.leccionesCompletadas.includes("dependencia-1")) {
@@ -276,8 +324,12 @@ export default function DependenciaPage() {
                         ref={canvasRef}
                         width={600}
                         height={600}
-                        className="border rounded-lg w-full max-w-[600px] mx-auto bg-white"
+                        className="border-2 border-gray-300 rounded-lg bg-white shadow-lg"
+                        style={{ width: '600px', height: '600px' }}
                       />
+                      <div className="mt-2 text-center text-sm text-gray-600">
+                        Estado del canvas: {renderer ? "✅ Listo" : "⏳ Inicializando..."}
+                      </div>
                       <div className="mt-4 flex flex-wrap gap-3 justify-center text-sm">
                         {vectores.map((v, i) => (
                           <div key={v.id} className="flex items-center gap-2">
@@ -405,9 +457,60 @@ export default function DependenciaPage() {
                     <CardHeader>
                       <CardTitle>Análisis</CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="space-y-2">
                       <Button onClick={verificarDependencia} className="w-full">
                         Verificar Dependencia Lineal
+                      </Button>
+                      <Button 
+                        onClick={() => {
+                          if (canvasRef.current) {
+                            console.log("Canvas dependencia encontrado:", canvasRef.current)
+                            const canvas = canvasRef.current
+                            const ctx = canvas.getContext('2d')
+                            
+                            if (ctx) {
+                              console.log("Contexto 2D obtenido para dependencia")
+                              // Dibujar algo básico para verificar que el canvas funciona
+                              ctx.fillStyle = '#f0f0f0'
+                              ctx.fillRect(0, 0, 600, 600)
+                              
+                              ctx.strokeStyle = '#000000'
+                              ctx.lineWidth = 2
+                              ctx.beginPath()
+                              ctx.moveTo(0, 300)
+                              ctx.lineTo(600, 300)
+                              ctx.moveTo(300, 0)
+                              ctx.lineTo(300, 600)
+                              ctx.stroke()
+                              
+                              ctx.fillStyle = '#000000'
+                              ctx.font = '16px Arial'
+                              ctx.fillText('Canvas dependencia funcionando', 200, 280)
+                              ctx.fillText('X', 580, 290)
+                              ctx.fillText('Y', 310, 20)
+                              
+                              console.log("Dibujo básico dependencia completado")
+                              
+                              // Ahora intentar con el renderer
+                              try {
+                                const newRenderer = new CanvasRenderer(canvas)
+                                newRenderer.renderizarEscena()
+                                setRenderer(newRenderer)
+                                console.log("Plano cartesiano renderizado con renderer")
+                              } catch (error) {
+                                console.error("Error al renderizar plano cartesiano:", error)
+                              }
+                            } else {
+                              console.log("No se pudo obtener contexto 2D para dependencia")
+                            }
+                          } else {
+                            console.log("Canvas dependencia no encontrado")
+                          }
+                        }} 
+                        variant="outline"
+                        className="w-full"
+                      >
+                        Debug Canvas
                       </Button>
                     </CardContent>
                   </Card>
@@ -418,13 +521,24 @@ export default function DependenciaPage() {
                     </CardHeader>
                     <CardContent className="space-y-2 text-xs">
                       <Button
-                        onClick={() =>
-                          setVectores([
+                        onClick={() => {
+                          const nuevosVectores = [
                             { id: "1", x: "1", y: "0", z: "0", color: COLORS[0] },
                             { id: "2", x: "0", y: "1", z: "0", color: COLORS[1] },
                             { id: "3", x: "0", y: "0", z: "1", color: COLORS[2] },
-                          ])
-                        }
+                          ]
+                          setVectores(nuevosVectores)
+                          
+                          // Renderizar vectores inmediatamente
+                          if (renderer) {
+                            renderer.limpiar()
+                            renderer.renderizarEscena()
+                            nuevosVectores.forEach((v, i) => {
+                              const vector = new Vector3D(parseFloat(v.x), parseFloat(v.y), parseFloat(v.z), `V${v.id}`)
+                              renderer.dibujarVector(vector, v.color)
+                            })
+                          }
+                        }}
                         variant="outline"
                         size="sm"
                         className="w-full text-xs"
@@ -432,12 +546,23 @@ export default function DependenciaPage() {
                         Base Canónica (Independientes)
                       </Button>
                       <Button
-                        onClick={() =>
-                          setVectores([
+                        onClick={() => {
+                          const nuevosVectores = [
                             { id: "1", x: "1", y: "2", z: "3", color: COLORS[0] },
                             { id: "2", x: "2", y: "4", z: "6", color: COLORS[1] },
-                          ])
-                        }
+                          ]
+                          setVectores(nuevosVectores)
+                          
+                          // Renderizar vectores inmediatamente
+                          if (renderer) {
+                            renderer.limpiar()
+                            renderer.renderizarEscena()
+                            nuevosVectores.forEach((v, i) => {
+                              const vector = new Vector3D(parseFloat(v.x), parseFloat(v.y), parseFloat(v.z), `V${v.id}`)
+                              renderer.dibujarVector(vector, v.color)
+                            })
+                          }
+                        }}
                         variant="outline"
                         size="sm"
                         className="w-full text-xs"
@@ -445,13 +570,24 @@ export default function DependenciaPage() {
                         Paralelos (Dependientes)
                       </Button>
                       <Button
-                        onClick={() =>
-                          setVectores([
+                        onClick={() => {
+                          const nuevosVectores = [
                             { id: "1", x: "1", y: "0", z: "0", color: COLORS[0] },
                             { id: "2", x: "0", y: "1", z: "0", color: COLORS[1] },
                             { id: "3", x: "1", y: "1", z: "0", color: COLORS[2] },
-                          ])
-                        }
+                          ]
+                          setVectores(nuevosVectores)
+                          
+                          // Renderizar vectores inmediatamente
+                          if (renderer) {
+                            renderer.limpiar()
+                            renderer.renderizarEscena()
+                            nuevosVectores.forEach((v, i) => {
+                              const vector = new Vector3D(parseFloat(v.x), parseFloat(v.y), parseFloat(v.z), `V${v.id}`)
+                              renderer.dibujarVector(vector, v.color)
+                            })
+                          }
+                        }}
                         variant="outline"
                         size="sm"
                         className="w-full text-xs"
