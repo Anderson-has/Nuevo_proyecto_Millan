@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, BookOpen, Calculator, Plus, Trash2, RotateCcw } from "lucide-react"
+import { ArrowLeft, BookOpen, Calculator, Plus, Trash2, RotateCcw, Lightbulb, HelpCircle } from "lucide-react"
 import { VectorOperationsService } from "@/src/servicios/VectorOperationsService"
 import { Vector3D } from "@/src/entidades/Vector3D"
 import { CanvasRenderer } from "@/src/presentacion/CanvasRenderer"
@@ -37,6 +37,9 @@ export default function DependenciaPage() {
     { id: "2", x: "0", y: "1", z: "0", color: COLORS[1] },
   ])
   const [resultado, setResultado] = useState<any>(null)
+  const [resultadoBase, setResultadoBase] = useState<any>(null)
+  const [modoGuiado, setModoGuiado] = useState(false)
+  const [notaActual, setNotaActual] = useState("")
 
   useEffect(() => {
     const initializeCanvas = () => {
@@ -69,6 +72,13 @@ export default function DependenciaPage() {
     return () => clearTimeout(timer)
   }, [])
 
+  const mostrarNota = (nota: string) => {
+    if (modoGuiado) {
+      setNotaActual(nota)
+      setTimeout(() => setNotaActual(""), 3000)
+    }
+  }
+
   const agregarVector = () => {
     if (vectores.length >= 5) {
       alert("Máximo 5 vectores permitidos")
@@ -76,6 +86,9 @@ export default function DependenciaPage() {
     }
     const nuevoId = (Math.max(...vectores.map((v) => Number.parseInt(v.id))) + 1).toString()
     setVectores([...vectores, { id: nuevoId, x: "", y: "", z: "", color: COLORS[vectores.length % COLORS.length] }])
+    
+    // Mostrar nota guiada
+    mostrarNota(`➕ Vector ${nuevoId} agregado. Esto significa que has añadido un nuevo vector a tu conjunto para analizar su dependencia lineal.`)
   }
 
   const eliminarVector = (id: string) => {
@@ -84,10 +97,19 @@ export default function DependenciaPage() {
       return
     }
     setVectores(vectores.filter((v) => v.id !== id))
+    
+    // Mostrar nota guiada
+    mostrarNota(`🗑️ Vector ${id} eliminado. Esto significa que has removido un vector de tu conjunto, reduciendo el número de vectores para el análisis de dependencia.`)
   }
 
   const actualizarVector = (id: string, campo: "x" | "y" | "z", valor: string) => {
     setVectores(vectores.map((v) => (v.id === id ? { ...v, [campo]: valor } : v)))
+    
+    // Mostrar nota guiada
+    if (modoGuiado && valor) {
+      const componente = campo.toUpperCase()
+      mostrarNota(`📝 Componente ${componente} del Vector ${id}: ${valor}. Esto significa que has modificado la ${componente === 'X' ? 'horizontal' : componente === 'Y' ? 'vertical' : 'profundidad'} del vector para el análisis de dependencia.`)
+    }
   }
 
   const crearVector = (v: VectorInput): Vector3D | null => {
@@ -107,8 +129,9 @@ export default function DependenciaPage() {
       { id: "2", x: "0", y: "1", z: "0", color: COLORS[1] },
     ])
     
-    // Limpiar resultado
+    // Limpiar resultados
     setResultado(null)
+    setResultadoBase(null)
     
     // Limpiar canvas
     if (renderer) {
@@ -118,6 +141,62 @@ export default function DependenciaPage() {
     }
     
     console.log("Todo limpiado - vectores reiniciados a estado inicial")
+  }
+
+  const verificarBase = () => {
+    const vectoresValidos = vectores.map(crearVector).filter((v): v is Vector3D => v !== null)
+
+    if (vectoresValidos.length < 1) {
+      alert("Por favor ingresa al menos 1 vector válido")
+      return
+    }
+
+    const res = service.verificarBase(vectoresValidos)
+    setResultadoBase(res)
+
+    // Visualize vectors
+    if (renderer) {
+      console.log("Renderizando vectores para análisis de base...")
+      renderer.limpiar()
+      renderer.renderizarEscena()
+
+      vectoresValidos.forEach((vec, i) => {
+        console.log(`Dibujando vector ${i + 1}:`, vec.toString())
+        renderer.dibujarVector(vec, vectores[i].color)
+      })
+      console.log("Vectores renderizados exitosamente")
+    } else {
+      console.log("Renderer no disponible, intentando reinicializar...")
+      // Intentar reinicializar el renderer
+      if (canvasRef.current) {
+        const canvas = canvasRef.current
+        canvas.width = 600
+        canvas.height = 600
+        
+        try {
+          const newRenderer = new CanvasRenderer(canvas)
+          newRenderer.renderizarEscena()
+          setRenderer(newRenderer)
+          
+          // Dibujar vectores con el nuevo renderer
+          vectoresValidos.forEach((vec, i) => {
+            newRenderer.dibujarVector(vec, vectores[i].color)
+          })
+          console.log("Renderer reinicializado y vectores dibujados")
+        } catch (error) {
+          console.error("Error al reinicializar renderer:", error)
+        }
+      }
+    }
+
+    if (progreso && !progreso.leccionesCompletadas.includes("dependencia-2")) {
+      const nuevoProgreso = Progreso.fromJSON({
+        ...progreso,
+        leccionesCompletadas: [...progreso.leccionesCompletadas, "dependencia-2"],
+        puntajeTotal: progreso.puntajeTotal + 100,
+      })
+      actualizarProgreso(nuevoProgreso)
+    }
   }
 
   const verificarDependencia = () => {
@@ -350,6 +429,31 @@ export default function DependenciaPage() {
                       <div className="mt-2 text-center text-sm text-gray-600">
                         Estado del canvas: {renderer ? "✅ Listo" : "⏳ Inicializando..."}
                       </div>
+                      
+                      {/* Modo Guiado */}
+                      <div className="mt-4 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Lightbulb className="h-4 w-4 text-yellow-500" />
+                          <span className="text-sm font-medium">Modo Guiado</span>
+                        </div>
+                        <Button
+                          onClick={() => setModoGuiado(!modoGuiado)}
+                          variant={modoGuiado ? "default" : "outline"}
+                          size="sm"
+                        >
+                          {modoGuiado ? "Desactivar" : "Activar"}
+                        </Button>
+                      </div>
+                      
+                      {notaActual && (
+                        <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                          <div className="flex items-start gap-2">
+                            <HelpCircle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                            <p className="text-sm text-yellow-800">{notaActual}</p>
+                          </div>
+                        </div>
+                      )}
+                      
                       <div className="mt-4 flex flex-wrap gap-3 justify-center text-sm">
                         {vectores.map((v, i) => (
                           <div key={v.id} className="flex items-center gap-2">
@@ -364,7 +468,7 @@ export default function DependenciaPage() {
                   {resultado && (
                     <Card>
                       <CardHeader>
-                        <CardTitle>Resultado del Análisis</CardTitle>
+                        <CardTitle>Resultado del Análisis de Dependencia</CardTitle>
                       </CardHeader>
                       <CardContent>
                         <div className={`p-4 rounded-lg ${resultado.dependiente ? "bg-red-50" : "bg-green-50"}`}>
@@ -397,6 +501,59 @@ export default function DependenciaPage() {
                                 <p>• No hay redundancia en el conjunto</p>
                               </>
                             )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {resultadoBase && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Análisis de Base</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className={`p-4 rounded-lg ${resultadoBase.esBase ? "bg-green-50" : "bg-yellow-50"}`}>
+                          <p className="font-semibold text-lg mb-2">
+                            {resultadoBase.esBase ? "✅ FORMA BASE" : "❌ NO FORMA BASE"}
+                          </p>
+                          <p className="text-sm text-muted-foreground mb-2">{resultadoBase.explicacion}</p>
+                          <p className="text-sm font-medium">
+                            <strong>Dimensión del espacio:</strong> R{resultadoBase.dimension}
+                          </p>
+                        </div>
+
+                        {resultadoBase.baseAlternativa && resultadoBase.baseAlternativa.length > 0 && (
+                          <div className="mt-4 p-4 bg-purple-50 rounded-lg">
+                            <p className="font-medium text-purple-900 mb-2">Base Alternativa Sugerida:</p>
+                            <div className="space-y-1">
+                              {resultadoBase.baseAlternativa.map((vector: Vector3D, index: number) => (
+                                <p key={index} className="text-sm text-purple-800">
+                                  <strong>{vector.nombre}:</strong> {vector.toString()}
+                                </p>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {resultadoBase.sugerencias && resultadoBase.sugerencias.length > 0 && (
+                          <div className="mt-4 p-4 bg-orange-50 rounded-lg">
+                            <p className="font-medium text-orange-900 mb-2">Sugerencias:</p>
+                            <div className="text-sm text-orange-800 space-y-1">
+                              {resultadoBase.sugerencias.map((sugerencia: string, index: number) => (
+                                <p key={index}>{sugerencia}</p>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="mt-4 p-4 bg-indigo-50 rounded-lg">
+                          <p className="font-medium text-indigo-900 mb-2">Conceptos Clave:</p>
+                          <div className="text-sm text-indigo-800 space-y-1">
+                            <p>• <strong>Base:</strong> Conjunto de vectores linealmente independientes que generan todo el espacio</p>
+                            <p>• <strong>Dimensión:</strong> Número de vectores en cualquier base del espacio</p>
+                            <p>• <strong>R¹:</strong> Línea (1 vector), <strong>R²:</strong> Plano (2 vectores), <strong>R³:</strong> Espacio (3 vectores)</p>
+                            <p>• <strong>Base canónica:</strong> {(1,0,0), (0,1,0), (0,0,1)} para R³</p>
                           </div>
                         </div>
                       </CardContent>
@@ -478,9 +635,14 @@ export default function DependenciaPage() {
                       <CardTitle>Análisis</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      <Button onClick={verificarDependencia} className="w-full">
-                        Verificar Dependencia Lineal
-                      </Button>
+                      <div className="space-y-2">
+                        <Button onClick={verificarDependencia} className="w-full">
+                          Verificar Dependencia Lineal
+                        </Button>
+                        <Button onClick={verificarBase} variant="secondary" className="w-full">
+                          Verificar si Forma Base
+                        </Button>
+                      </div>
                       
                       <div className="grid grid-cols-2 gap-2">
                         <Button 
@@ -624,6 +786,55 @@ export default function DependenciaPage() {
                         className="w-full text-xs"
                       >
                         Coplanares (Dependientes)
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          const nuevosVectores = [
+                            { id: "1", x: "1", y: "0", z: "0", color: COLORS[0] },
+                            { id: "2", x: "0", y: "1", z: "0", color: COLORS[1] },
+                            { id: "3", x: "0", y: "0", z: "1", color: COLORS[2] },
+                          ]
+                          setVectores(nuevosVectores)
+                          
+                          // Renderizar vectores inmediatamente
+                          if (renderer) {
+                            renderer.limpiar()
+                            renderer.renderizarEscena()
+                            nuevosVectores.forEach((v, i) => {
+                              const vector = new Vector3D(parseFloat(v.x), parseFloat(v.y), parseFloat(v.z), `V${v.id}`)
+                              renderer.dibujarVector(vector, v.color)
+                            })
+                          }
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="w-full text-xs"
+                      >
+                        Base Canónica R³
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          const nuevosVectores = [
+                            { id: "1", x: "1", y: "0", z: "0", color: COLORS[0] },
+                            { id: "2", x: "0", y: "1", z: "0", color: COLORS[1] },
+                          ]
+                          setVectores(nuevosVectores)
+                          
+                          // Renderizar vectores inmediatamente
+                          if (renderer) {
+                            renderer.limpiar()
+                            renderer.renderizarEscena()
+                            nuevosVectores.forEach((v, i) => {
+                              const vector = new Vector3D(parseFloat(v.x), parseFloat(v.y), parseFloat(v.z), `V${v.id}`)
+                              renderer.dibujarVector(vector, v.color)
+                            })
+                          }
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="w-full text-xs"
+                      >
+                        Base Canónica R²
                       </Button>
                     </CardContent>
                   </Card>

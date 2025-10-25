@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, BookOpen, Calculator } from "lucide-react"
+import { ArrowLeft, BookOpen, Calculator, Lightbulb, HelpCircle } from "lucide-react"
 import { LineSegmentService } from "@/src/servicios/LineSegmentService"
 import { SegmentoRecta } from "@/src/entidades/SegmentoRecta"
 import { Vector3D } from "@/src/entidades/Vector3D"
@@ -28,14 +28,46 @@ export default function SegmentosPage() {
   const [resultado, setResultado] = useState<any>(null)
   const [pasos, setPasos] = useState<string[]>([])
   const [operacion, setOperacion] = useState<string>("")
+  const [modoGuiado, setModoGuiado] = useState(false)
+  const [notaActual, setNotaActual] = useState("")
 
   useEffect(() => {
-    if (canvasRef.current) {
-      const newRenderer = new CanvasRenderer(canvasRef.current)
-      newRenderer.renderizarEscena()
-      setRenderer(newRenderer)
+    const initializeCanvas = () => {
+      if (canvasRef.current) {
+        const canvas = canvasRef.current
+        console.log("Inicializando canvas de segmentos...", canvas)
+        
+        // Asegurar que el canvas tenga el tamaño correcto
+        canvas.width = 600
+        canvas.height = 600
+        
+        try {
+          const newRenderer = new CanvasRenderer(canvas)
+          console.log("Renderer de segmentos creado:", newRenderer)
+          newRenderer.renderizarEscena()
+          console.log("Escena de segmentos renderizada")
+          setRenderer(newRenderer)
+        } catch (error) {
+          console.error("Error al crear renderer de segmentos:", error)
+        }
+      }
     }
+
+    // Intentar inicializar inmediatamente
+    initializeCanvas()
+    
+    // También intentar después de un pequeño delay
+    const timer = setTimeout(initializeCanvas, 500)
+    
+    return () => clearTimeout(timer)
   }, [])
+
+  const mostrarNota = (nota: string) => {
+    if (modoGuiado) {
+      setNotaActual(nota)
+      setTimeout(() => setNotaActual(""), 3000)
+    }
+  }
 
   const crearSegmento = (): SegmentoRecta | null => {
     const x1 = Number.parseFloat(p1.x)
@@ -52,11 +84,87 @@ export default function SegmentosPage() {
     return new SegmentoRecta(new Vector3D(x1, y1, z1, "A"), new Vector3D(x2, y2, z2, "B"))
   }
 
+  const limpiarTodo = () => {
+    // Limpiar resultados
+    setResultado(null)
+    setPasos([])
+    setOperacion("")
+    
+    // Limpiar canvas
+    if (renderer) {
+      renderer.limpiar()
+      renderer.renderizarEscena()
+      console.log("Canvas limpiado y reiniciado")
+    }
+    
+    console.log("Todo limpiado - segmento reiniciado")
+  }
+
+  const debugCanvas = () => {
+    if (canvasRef.current) {
+      console.log("Canvas de segmentos encontrado:", canvasRef.current)
+      const canvas = canvasRef.current
+      const ctx = canvas.getContext('2d')
+      
+      if (ctx) {
+        console.log("Contexto 2D obtenido para segmentos")
+        // Dibujar algo básico para verificar que el canvas funciona
+        ctx.fillStyle = '#f0f0f0'
+        ctx.fillRect(0, 0, 600, 600)
+        
+        ctx.strokeStyle = '#000000'
+        ctx.lineWidth = 2
+        ctx.beginPath()
+        ctx.moveTo(0, 300)
+        ctx.lineTo(600, 300)
+        ctx.moveTo(300, 0)
+        ctx.lineTo(300, 600)
+        ctx.stroke()
+        
+        ctx.fillStyle = '#000000'
+        ctx.font = '16px Arial'
+        ctx.fillText('Canvas segmentos funcionando', 200, 280)
+        ctx.fillText('X', 580, 290)
+        ctx.fillText('Y', 310, 20)
+        
+        console.log("Dibujo básico segmentos completado")
+        
+        // Ahora intentar con el renderer
+        try {
+          const newRenderer = new CanvasRenderer(canvas)
+          newRenderer.renderizarEscena()
+          setRenderer(newRenderer)
+          console.log("Plano cartesiano renderizado con renderer")
+        } catch (error) {
+          console.error("Error al renderizar plano cartesiano:", error)
+        }
+      } else {
+        console.log("No se pudo obtener contexto 2D para segmentos")
+      }
+    } else {
+      console.log("Canvas de segmentos no encontrado")
+    }
+  }
+
   const realizarOperacion = (op: string) => {
     const segmento = crearSegmento()
     if (!segmento) {
       alert("Por favor ingresa puntos válidos")
       return
+    }
+
+    // Mostrar nota guiada según la operación
+    const notasOperacion: {[key: string]: string} = {
+      "longitud": "📏 Calculando longitud del segmento. Esto significa la distancia entre los puntos A y B del segmento.",
+      "puntoMedio": "🎯 Calculando punto medio del segmento. Esto significa el punto que está exactamente a la mitad entre A y B.",
+      "vectorDirector": "➡️ Calculando vector director del segmento. Esto significa el vector que indica la dirección del segmento de A hacia B.",
+      "ecuacion": "📐 Obteniendo ecuación paramétrica del segmento. Esto significa la ecuación que describe todos los puntos del segmento.",
+      "ecuacionContinua": "📐 Obteniendo ecuación continua del segmento. Esto significa la forma continua de la ecuación del segmento.",
+      "informacionCompleta": "📊 Obteniendo información completa del segmento. Esto significa todos los datos del segmento: longitud, vector director y ecuaciones."
+    }
+    
+    if (notasOperacion[op]) {
+      mostrarNota(notasOperacion[op])
     }
 
     let res
@@ -73,6 +181,12 @@ export default function SegmentosPage() {
       case "ecuacion":
         res = service.obtenerEcuacionParametrica(segmento)
         break
+      case "ecuacionContinua":
+        res = service.obtenerEcuacionContinua(segmento)
+        break
+      case "informacionCompleta":
+        res = service.obtenerInformacionCompleta(segmento)
+        break
       default:
         return
     }
@@ -82,15 +196,64 @@ export default function SegmentosPage() {
     setOperacion(op)
 
     // Visualize
+    if (!renderer) {
+      console.log("Renderer no disponible, reinicializando...")
+      if (canvasRef.current) {
+        const canvas = canvasRef.current
+        canvas.width = 600
+        canvas.height = 600
+        
+        try {
+          const newRenderer = new CanvasRenderer(canvas)
+          newRenderer.renderizarEscena()
+          setRenderer(newRenderer)
+          console.log("Renderer reinicializado exitosamente")
+        } catch (error) {
+          console.error("Error al reinicializar renderer:", error)
+          return
+        }
+      } else {
+        console.error("Canvas no encontrado")
+        return
+      }
+    }
+
     if (renderer) {
+      console.log("Renderizando segmento en canvas...")
       renderer.limpiar()
       renderer.renderizarEscena()
+      
+      // Dibujar puntos A y B
+      console.log("Dibujando punto A:", segmento.puntoInicial.toString())
       renderer.dibujarVector(segmento.puntoInicial, "#3B82F6")
+      console.log("Dibujando punto B:", segmento.puntoFinal.toString())
       renderer.dibujarVector(segmento.puntoFinal, "#10B981")
+      
+      // Dibujar el segmento como línea
+      console.log("Dibujando segmento")
+      renderer.dibujarSegmento(segmento.puntoInicial, segmento.puntoFinal, "#8B5CF6", 2)
 
-      if (res.resultado instanceof Vector3D) {
-        renderer.dibujarVector(res.resultado, "#EF4444")
+      // Dibujar vector director si es el caso
+      if (op === "vectorDirector" || op === "informacionCompleta") {
+        const vectorDirector = service.calcularVectorDirector(segmento).resultado as Vector3D
+        const origen = segmento.puntoInicial
+        const final = new Vector3D(
+          origen.x + vectorDirector.x,
+          origen.y + vectorDirector.y,
+          origen.z + vectorDirector.z,
+          "Vector Director"
+        )
+        console.log("Dibujando vector director:", vectorDirector.toString())
+        renderer.dibujarVector(final, "#EF4444", origen)
       }
+
+      // Dibujar punto medio si es el caso
+      if (op === "puntoMedio" && res.resultado instanceof Vector3D) {
+        console.log("Dibujando punto medio:", res.resultado.toString())
+        renderer.dibujarVector(res.resultado, "#F59E0B")
+      }
+      
+      console.log("Segmento renderizado exitosamente")
     }
 
     if (progreso && !progreso.leccionesCompletadas.includes("segmentos-1")) {
@@ -228,9 +391,38 @@ export default function SegmentosPage() {
                         ref={canvasRef}
                         width={600}
                         height={600}
-                        className="border rounded-lg w-full max-w-[600px] mx-auto bg-white"
+                        className="border-4 border-gray-400 rounded-lg w-full max-w-[600px] mx-auto bg-white shadow-lg"
+                        style={{ width: '600px', height: '600px' }}
                       />
-                      <div className="mt-4 flex gap-4 justify-center text-sm">
+                      <div className="text-xs text-gray-500 mt-2 text-center">
+                        Estado del canvas: {renderer ? "✅ Listo" : "⏳ Inicializando..."}
+                      </div>
+                      
+                      {/* Modo Guiado */}
+                      <div className="mt-4 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Lightbulb className="h-4 w-4 text-yellow-500" />
+                          <span className="text-sm font-medium">Modo Guiado</span>
+                        </div>
+                        <Button
+                          onClick={() => setModoGuiado(!modoGuiado)}
+                          variant={modoGuiado ? "default" : "outline"}
+                          size="sm"
+                        >
+                          {modoGuiado ? "Desactivar" : "Activar"}
+                        </Button>
+                      </div>
+                      
+                      {notaActual && (
+                        <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                          <div className="flex items-start gap-2">
+                            <HelpCircle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                            <p className="text-sm text-yellow-800">{notaActual}</p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="mt-4 flex flex-wrap gap-4 justify-center text-sm">
                         <div className="flex items-center gap-2">
                           <div className="w-4 h-4 bg-blue-500 rounded" />
                           <span>Punto A</span>
@@ -240,8 +432,16 @@ export default function SegmentosPage() {
                           <span>Punto B</span>
                         </div>
                         <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 bg-purple-500 rounded" />
+                          <span>Segmento</span>
+                        </div>
+                        <div className="flex items-center gap-2">
                           <div className="w-4 h-4 bg-red-500 rounded" />
-                          <span>Resultado</span>
+                          <span>Vector Director</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 bg-yellow-500 rounded" />
+                          <span>Punto Medio</span>
                         </div>
                       </div>
                     </CardContent>
@@ -250,21 +450,56 @@ export default function SegmentosPage() {
                   {resultado !== null && pasos.length > 0 && (
                     <Card>
                       <CardHeader>
-                        <CardTitle>Resultado y Pasos</CardTitle>
+                        <CardTitle>
+                          {operacion === "informacionCompleta" ? "Información Completa del Segmento" : "Resultado y Pasos"}
+                        </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                        <div className="p-4 bg-cyan-50 rounded-lg">
-                          <p className="text-sm text-muted-foreground mb-1">Resultado:</p>
-                          {typeof resultado === "number" ? (
-                            <p className="text-2xl font-bold">{resultado.toFixed(4)}</p>
-                          ) : resultado instanceof Vector3D ? (
-                            <p className="font-mono text-lg">
-                              ({resultado.x.toFixed(2)}, {resultado.y.toFixed(2)}, {resultado.z.toFixed(2)})
-                            </p>
-                          ) : (
-                            <p className="font-mono text-sm">{resultado}</p>
-                          )}
-                        </div>
+                        {operacion === "informacionCompleta" && typeof resultado === "object" && resultado !== null ? (
+                          <div className="space-y-4">
+                            <div className="p-4 bg-cyan-50 rounded-lg">
+                              <p className="font-semibold text-cyan-900 mb-2">📊 Resumen del Segmento</p>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                <div>
+                                  <p><strong>Punto A:</strong> ({resultado.puntoInicial.x.toFixed(2)}, {resultado.puntoInicial.y.toFixed(2)}, {resultado.puntoInicial.z.toFixed(2)})</p>
+                                  <p><strong>Punto B:</strong> ({resultado.puntoFinal.x.toFixed(2)}, {resultado.puntoFinal.y.toFixed(2)}, {resultado.puntoFinal.z.toFixed(2)})</p>
+                                </div>
+                                <div>
+                                  <p><strong>Longitud:</strong> {resultado.longitud.toFixed(4)}</p>
+                                  <p><strong>Vector Director:</strong> ({resultado.vectorDirector.x.toFixed(2)}, {resultado.vectorDirector.y.toFixed(2)}, {resultado.vectorDirector.z.toFixed(2)})</p>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="p-4 bg-purple-50 rounded-lg">
+                              <p className="font-semibold text-purple-900 mb-2">📐 Ecuación Paramétrica</p>
+                              <p className="font-mono text-sm bg-white p-2 rounded border">
+                                {resultado.ecuacionParametrica}
+                              </p>
+                              <p className="text-xs text-purple-700 mt-1">Donde t ∈ [0, 1]</p>
+                            </div>
+
+                            <div className="p-4 bg-orange-50 rounded-lg">
+                              <p className="font-semibold text-orange-900 mb-2">📐 Ecuación Continua</p>
+                              <p className="font-mono text-sm bg-white p-2 rounded border">
+                                {resultado.ecuacionContinua}
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="p-4 bg-cyan-50 rounded-lg">
+                            <p className="text-sm text-muted-foreground mb-1">Resultado:</p>
+                            {typeof resultado === "number" ? (
+                              <p className="text-2xl font-bold">{resultado.toFixed(4)}</p>
+                            ) : resultado instanceof Vector3D ? (
+                              <p className="font-mono text-lg">
+                                ({resultado.x.toFixed(2)}, {resultado.y.toFixed(2)}, {resultado.z.toFixed(2)})
+                              </p>
+                            ) : (
+                              <p className="font-mono text-sm">{resultado}</p>
+                            )}
+                          </div>
+                        )}
 
                         <div className="p-4 bg-blue-50 rounded-lg max-h-60 overflow-y-auto">
                           <p className="font-medium text-blue-900 mb-2">Pasos del cálculo:</p>
@@ -297,30 +532,54 @@ export default function SegmentosPage() {
                               <Input
                                 type="number"
                                 value={p1.x}
-                                onChange={(e) => setP1({ ...p1, x: e.target.value })}
+                                onChange={(e) => {
+                                  setP1({ ...p1, x: e.target.value })
+                                  if (modoGuiado && e.target.value) {
+                                    mostrarNota(`📝 Coordenada X del Punto A: ${e.target.value}. Esto significa la posición horizontal del punto inicial del segmento.`)
+                                  }
+                                }}
                                 step="0.1"
                                 className="h-8"
                               />
+                              {modoGuiado && (
+                                <p className="text-xs text-gray-500">💡 Posición horizontal</p>
+                              )}
                             </div>
                             <div className="space-y-1">
                               <Label className="text-xs">Y</Label>
                               <Input
                                 type="number"
                                 value={p1.y}
-                                onChange={(e) => setP1({ ...p1, y: e.target.value })}
+                                onChange={(e) => {
+                                  setP1({ ...p1, y: e.target.value })
+                                  if (modoGuiado && e.target.value) {
+                                    mostrarNota(`📝 Coordenada Y del Punto A: ${e.target.value}. Esto significa la posición vertical del punto inicial del segmento.`)
+                                  }
+                                }}
                                 step="0.1"
                                 className="h-8"
                               />
+                              {modoGuiado && (
+                                <p className="text-xs text-gray-500">💡 Posición vertical</p>
+                              )}
                             </div>
                             <div className="space-y-1">
                               <Label className="text-xs">Z</Label>
                               <Input
                                 type="number"
                                 value={p1.z}
-                                onChange={(e) => setP1({ ...p1, z: e.target.value })}
+                                onChange={(e) => {
+                                  setP1({ ...p1, z: e.target.value })
+                                  if (modoGuiado && e.target.value) {
+                                    mostrarNota(`📝 Coordenada Z del Punto A: ${e.target.value}. Esto significa la posición de profundidad del punto inicial del segmento.`)
+                                  }
+                                }}
                                 step="0.1"
                                 className="h-8"
                               />
+                              {modoGuiado && (
+                                <p className="text-xs text-gray-500">💡 Posición de profundidad</p>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -333,30 +592,54 @@ export default function SegmentosPage() {
                               <Input
                                 type="number"
                                 value={p2.x}
-                                onChange={(e) => setP2({ ...p2, x: e.target.value })}
+                                onChange={(e) => {
+                                  setP2({ ...p2, x: e.target.value })
+                                  if (modoGuiado && e.target.value) {
+                                    mostrarNota(`📝 Coordenada X del Punto B: ${e.target.value}. Esto significa la posición horizontal del punto final del segmento.`)
+                                  }
+                                }}
                                 step="0.1"
                                 className="h-8"
                               />
+                              {modoGuiado && (
+                                <p className="text-xs text-gray-500">💡 Posición horizontal</p>
+                              )}
                             </div>
                             <div className="space-y-1">
                               <Label className="text-xs">Y</Label>
                               <Input
                                 type="number"
                                 value={p2.y}
-                                onChange={(e) => setP2({ ...p2, y: e.target.value })}
+                                onChange={(e) => {
+                                  setP2({ ...p2, y: e.target.value })
+                                  if (modoGuiado && e.target.value) {
+                                    mostrarNota(`📝 Coordenada Y del Punto B: ${e.target.value}. Esto significa la posición vertical del punto final del segmento.`)
+                                  }
+                                }}
                                 step="0.1"
                                 className="h-8"
                               />
+                              {modoGuiado && (
+                                <p className="text-xs text-gray-500">💡 Posición vertical</p>
+                              )}
                             </div>
                             <div className="space-y-1">
                               <Label className="text-xs">Z</Label>
                               <Input
                                 type="number"
                                 value={p2.z}
-                                onChange={(e) => setP2({ ...p2, z: e.target.value })}
+                                onChange={(e) => {
+                                  setP2({ ...p2, z: e.target.value })
+                                  if (modoGuiado && e.target.value) {
+                                    mostrarNota(`📝 Coordenada Z del Punto B: ${e.target.value}. Esto significa la posición de profundidad del punto final del segmento.`)
+                                  }
+                                }}
                                 step="0.1"
                                 className="h-8"
                               />
+                              {modoGuiado && (
+                                <p className="text-xs text-gray-500">💡 Posición de profundidad</p>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -369,8 +652,11 @@ export default function SegmentosPage() {
                       <CardTitle>Operaciones</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2">
-                      <Button onClick={() => realizarOperacion("longitud")} className="w-full" size="sm">
-                        Calcular Longitud
+                      <Button onClick={() => realizarOperacion("informacionCompleta")} className="w-full" size="sm">
+                        📊 Información Completa
+                      </Button>
+                      <Button onClick={() => realizarOperacion("longitud")} variant="outline" className="w-full" size="sm">
+                        📏 Calcular Longitud
                       </Button>
                       <Button
                         onClick={() => realizarOperacion("puntoMedio")}
@@ -378,7 +664,7 @@ export default function SegmentosPage() {
                         className="w-full"
                         size="sm"
                       >
-                        Punto Medio
+                        🎯 Punto Medio
                       </Button>
                       <Button
                         onClick={() => realizarOperacion("vectorDirector")}
@@ -386,7 +672,7 @@ export default function SegmentosPage() {
                         className="w-full"
                         size="sm"
                       >
-                        Vector Director
+                        ➡️ Vector Director
                       </Button>
                       <Button
                         onClick={() => realizarOperacion("ecuacion")}
@@ -394,8 +680,35 @@ export default function SegmentosPage() {
                         className="w-full"
                         size="sm"
                       >
-                        Ecuación Paramétrica
+                        📐 Ecuación Paramétrica
                       </Button>
+                      <Button
+                        onClick={() => realizarOperacion("ecuacionContinua")}
+                        variant="outline"
+                        className="w-full"
+                        size="sm"
+                      >
+                        📐 Ecuación Continua
+                      </Button>
+                      
+                      <div className="grid grid-cols-2 gap-2 mt-4">
+                        <Button 
+                          onClick={limpiarTodo}
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                        >
+                          🧹 Limpiar
+                        </Button>
+                        <Button 
+                          onClick={debugCanvas}
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                        >
+                          🔧 Debug Canvas
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 </div>

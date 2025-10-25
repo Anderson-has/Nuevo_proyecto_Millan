@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, BookOpen, Info, MapPin, Navigation } from "lucide-react"
+import { ArrowLeft, BookOpen, Info, MapPin, Navigation, Lightbulb, HelpCircle } from "lucide-react"
 import { CanvasRenderer } from "@/src/presentacion/CanvasRenderer"
 import { Progreso } from "@/src/entidades/Progreso"
 
@@ -21,6 +21,8 @@ export default function CartesianoPage() {
   const [x, setX] = useState("")
   const [y, setY] = useState("")
   const [puntos, setPuntos] = useState<Array<{ x: number; y: number }>>([])
+  const [modoGuiado, setModoGuiado] = useState(false)
+  const [notaActual, setNotaActual] = useState("")
 
   useEffect(() => {
     const initializeCanvas = () => {
@@ -53,6 +55,13 @@ export default function CartesianoPage() {
     return () => clearTimeout(timer)
   }, [])
 
+  const mostrarNota = (nota: string) => {
+    if (modoGuiado) {
+      setNotaActual(nota)
+      setTimeout(() => setNotaActual(""), 3000)
+    }
+  }
+
   const agregarPunto = () => {
     const xNum = Number.parseFloat(x)
     const yNum = Number.parseFloat(y)
@@ -68,6 +77,9 @@ export default function CartesianoPage() {
       setPuntos(nuevosPuntos)
       setX("")
       setY("")
+
+      // Mostrar nota guiada
+      mostrarNota(`✅ Punto agregado: (${xNum}, ${yNum}). Esto significa que has ubicado un punto en el plano cartesiano con coordenada X=${xNum} e Y=${yNum}.`)
 
       // Mark as completed after first point
       if (progreso && !progreso.leccionesCompletadas.includes("cartesiano-1")) {
@@ -86,6 +98,9 @@ export default function CartesianoPage() {
       renderer.limpiar()
       renderer.dibujarPlanoCartesiano()
       setPuntos([])
+      
+      // Mostrar nota guiada
+      mostrarNota("🧹 Plano limpiado. Esto significa que has borrado todos los puntos del plano cartesiano y vuelto al estado inicial.")
     }
   }
 
@@ -295,6 +310,30 @@ export default function CartesianoPage() {
                   <div className="text-xs text-gray-500 mt-2 text-center">
                     Estado del canvas: {renderer ? "✅ Listo" : "⏳ Inicializando..."}
                   </div>
+                  
+                  {/* Modo Guiado */}
+                  <div className="mt-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Lightbulb className="h-4 w-4 text-yellow-500" />
+                      <span className="text-sm font-medium">Modo Guiado</span>
+                    </div>
+                    <Button
+                      onClick={() => setModoGuiado(!modoGuiado)}
+                      variant={modoGuiado ? "default" : "outline"}
+                      size="sm"
+                    >
+                      {modoGuiado ? "Desactivar" : "Activar"}
+                    </Button>
+                  </div>
+                  
+                  {notaActual && (
+                    <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <HelpCircle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-yellow-800">{notaActual}</p>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -313,9 +352,17 @@ export default function CartesianoPage() {
                       type="number"
                       placeholder="Ej: 5"
                       value={x}
-                      onChange={(e) => setX(e.target.value)}
+                      onChange={(e) => {
+                        setX(e.target.value)
+                        if (modoGuiado && e.target.value) {
+                          mostrarNota(`📝 Ingresando coordenada X: ${e.target.value}. Esto significa la posición horizontal del punto en el plano cartesiano.`)
+                        }
+                      }}
                       step="0.1"
                     />
+                    {modoGuiado && (
+                      <p className="text-xs text-gray-600">💡 La coordenada X indica la posición horizontal (izquierda/derecha)</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="y">Coordenada Y</Label>
@@ -324,9 +371,17 @@ export default function CartesianoPage() {
                       type="number"
                       placeholder="Ej: 3"
                       value={y}
-                      onChange={(e) => setY(e.target.value)}
+                      onChange={(e) => {
+                        setY(e.target.value)
+                        if (modoGuiado && e.target.value) {
+                          mostrarNota(`📝 Ingresando coordenada Y: ${e.target.value}. Esto significa la posición vertical del punto en el plano cartesiano.`)
+                        }
+                      }}
                       step="0.1"
                     />
+                    {modoGuiado && (
+                      <p className="text-xs text-gray-600">💡 La coordenada Y indica la posición vertical (arriba/abajo)</p>
+                    )}
                   </div>
                   <Button onClick={agregarPunto} className="w-full">
                     Graficar Punto

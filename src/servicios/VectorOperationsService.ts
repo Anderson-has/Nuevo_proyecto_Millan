@@ -288,4 +288,114 @@ export class VectorOperationsService {
       explicacion: `La suma de ${vectores.length} vectores se realiza sumando todas las componentes correspondientes.`,
     }
   }
+
+  // Verificar si un conjunto forma base
+  verificarBase(vectores: Vector3D[]): {
+    esBase: boolean
+    dimension: number
+    explicacion: string
+    baseAlternativa?: Vector3D[]
+    sugerencias: string[]
+  } {
+    if (vectores.length === 0) {
+      return {
+        esBase: false,
+        dimension: 0,
+        explicacion: "No hay vectores para analizar",
+        sugerencias: ["Agregue al menos un vector para formar una base"]
+      }
+    }
+
+    // Verificar dependencia lineal
+    const dependencia = this.verificarDependenciaLineal(vectores)
+    
+    // Determinar dimensión del espacio
+    let dimension = 0
+    if (vectores.length === 1 && !dependencia.dependiente) {
+      dimension = 1 // Línea
+    } else if (vectores.length === 2 && !dependencia.dependiente) {
+      dimension = 2 // Plano
+    } else if (vectores.length === 3 && !dependencia.dependiente) {
+      dimension = 3 // Espacio 3D
+    } else if (vectores.length > 3) {
+      dimension = 3 // Máximo 3D
+    }
+
+    // Generar base alternativa
+    const baseAlternativa = this.generarBaseAlternativa(dimension)
+    
+    // Generar sugerencias
+    const sugerencias = this.generarSugerencias(vectores, dependencia, dimension)
+
+    return {
+      esBase: !dependencia.dependiente && vectores.length === dimension,
+      dimension,
+      explicacion: this.generarExplicacionBase(vectores, dependencia, dimension),
+      baseAlternativa,
+      sugerencias
+    }
+  }
+
+  // Generar base alternativa
+  private generarBaseAlternativa(dimension: number): Vector3D[] {
+    const bases = {
+      1: [new Vector3D(1, 0, 0, "e₁")],
+      2: [
+        new Vector3D(1, 0, 0, "e₁"),
+        new Vector3D(0, 1, 0, "e₂")
+      ],
+      3: [
+        new Vector3D(1, 0, 0, "e₁"),
+        new Vector3D(0, 1, 0, "e₂"),
+        new Vector3D(0, 0, 1, "e₃")
+      ]
+    }
+    
+    return bases[dimension as keyof typeof bases] || []
+  }
+
+  // Generar sugerencias
+  private generarSugerencias(vectores: Vector3D[], dependencia: any, dimension: number): string[] {
+    const sugerencias: string[] = []
+    
+    if (dependencia.dependiente) {
+      sugerencias.push("• Elimine vectores redundantes para obtener independencia lineal")
+      sugerencias.push("• Use la base canónica como alternativa")
+    }
+    
+    if (vectores.length < dimension) {
+      sugerencias.push(`• Agregue ${dimension - vectores.length} vector(es) más para completar la base`)
+    }
+    
+    if (vectores.length > dimension) {
+      sugerencias.push(`• Elimine ${vectores.length - dimension} vector(es) para obtener una base`)
+    }
+    
+    if (dimension === 1) {
+      sugerencias.push("• Para R¹: use un vector no nulo")
+    } else if (dimension === 2) {
+      sugerencias.push("• Para R²: use dos vectores no paralelos")
+    } else if (dimension === 3) {
+      sugerencias.push("• Para R³: use tres vectores no coplanares")
+    }
+    
+    return sugerencias
+  }
+
+  // Generar explicación de la base
+  private generarExplicacionBase(vectores: Vector3D[], dependencia: any, dimension: number): string {
+    if (dependencia.dependiente) {
+      return `Los vectores son linealmente dependientes. No forman una base. Dimensión del espacio: ${dimension}`
+    }
+    
+    if (vectores.length === dimension) {
+      return `Los vectores son linealmente independientes y forman una base de R${dimension}`
+    }
+    
+    if (vectores.length < dimension) {
+      return `Los vectores son independientes pero insuficientes. Necesita ${dimension - vectores.length} vector(es) más para formar una base de R${dimension}`
+    }
+    
+    return `Los vectores son independientes pero exceden la dimensión. Forman una base de R${dimension}`
+  }
 }

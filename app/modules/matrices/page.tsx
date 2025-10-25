@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, BookOpen, Plus, Minus, X, Target, Calculator, Wrench, RotateCcw, CheckCircle, Grid3X3, BarChart3 } from "lucide-react"
+import { ArrowLeft, BookOpen, Plus, Minus, X, Target, Calculator, Wrench, RotateCcw, CheckCircle, Grid3X3, BarChart3, Lightbulb, HelpCircle } from "lucide-react"
 
 export default function MatricesPage() {
   const router = useRouter()
@@ -22,6 +22,15 @@ export default function MatricesPage() {
   const [resultado, setResultado] = useState<number[][] | null>(null)
   const [pasos, setPasos] = useState<string[]>([])
   const [escalar, setEscalar] = useState<string>("2")
+  const [modoGuiado, setModoGuiado] = useState(false)
+  const [notaActual, setNotaActual] = useState("")
+
+  const mostrarNota = (nota: string) => {
+    if (modoGuiado) {
+      setNotaActual(nota)
+      setTimeout(() => setNotaActual(""), 3000)
+    }
+  }
 
   // Crear una nueva matriz
   const crearMatriz = (nombre: string, filas: number, columnas: number) => {
@@ -31,6 +40,9 @@ export default function MatricesPage() {
       [nombre]: nuevaMatriz
     }))
     setMatrizSeleccionada(nombre)
+    
+    // Mostrar nota guiada
+    mostrarNota(`📊 Matriz "${nombre}" creada: ${filas}×${columnas}. Esto significa que has definido una matriz con ${filas} filas y ${columnas} columnas para realizar operaciones matriciales.`)
   }
 
   // Actualizar valor de una matriz
@@ -46,6 +58,11 @@ export default function MatricesPage() {
         [nombre]: nuevaMatriz
       }
     })
+    
+    // Mostrar nota guiada
+    if (modoGuiado && valor) {
+      mostrarNota(`📝 Elemento [${fila+1},${columna+1}] de "${nombre}": ${valor}. Esto significa que has modificado el valor en la fila ${fila+1}, columna ${columna+1} de la matriz.`)
+    }
   }
 
   // Realizar operaciones
@@ -787,6 +804,30 @@ export default function MatricesPage() {
                     <Target className="mr-2 h-5 w-5" />
                     🎯 Práctica con Matrices
                   </CardTitle>
+                  
+                  {/* Modo Guiado */}
+                  <div className="mt-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Lightbulb className="h-4 w-4 text-yellow-500" />
+                      <span className="text-sm font-medium">Modo Guiado</span>
+                    </div>
+                    <Button
+                      onClick={() => setModoGuiado(!modoGuiado)}
+                      variant={modoGuiado ? "default" : "outline"}
+                      size="sm"
+                    >
+                      {modoGuiado ? "Desactivar" : "Activar"}
+                    </Button>
+                  </div>
+                  
+                  {notaActual && (
+                    <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <HelpCircle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-yellow-800">{notaActual}</p>
+                      </div>
+                    </div>
+                  )}
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

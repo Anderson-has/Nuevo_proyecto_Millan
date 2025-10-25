@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, Calculator, Plus, Trash2, BookOpen, Info } from "lucide-react"
+import { ArrowLeft, Calculator, Plus, Trash2, BookOpen, Info, Lightbulb, HelpCircle } from "lucide-react"
 import { VectorOperationsService } from "@/src/servicios/VectorOperationsService"
 import { Vector3D } from "@/src/entidades/Vector3D"
 import { CanvasRenderer } from "@/src/presentacion/CanvasRenderer"
@@ -47,6 +47,8 @@ export default function VectoresPage() {
   const [pasos, setPasos] = useState<string[]>([])
   const [operacion, setOperacion] = useState<string>("suma")
   const [escalar, setEscalar] = useState<string>("2")
+  const [modoGuiado, setModoGuiado] = useState(false)
+  const [notaActual, setNotaActual] = useState("")
 
   useEffect(() => {
     const initializeCanvas = () => {
@@ -79,6 +81,13 @@ export default function VectoresPage() {
     return () => clearTimeout(timer)
   }, [])
 
+  const mostrarNota = (nota: string) => {
+    if (modoGuiado) {
+      setNotaActual(nota)
+      setTimeout(() => setNotaActual(""), 3000)
+    }
+  }
+
   const agregarVector = () => {
     if (vectores.length >= 8) {
       alert("Máximo 8 vectores permitidos")
@@ -94,6 +103,9 @@ export default function VectoresPage() {
       origenX: 0,
       origenY: 0
     }])
+    
+    // Mostrar nota guiada
+    mostrarNota(`➕ Vector ${nuevoId} agregado. Esto significa que has añadido un nuevo vector a tu conjunto para realizar operaciones vectoriales.`)
   }
 
   const eliminarVector = (id: string) => {
@@ -102,10 +114,19 @@ export default function VectoresPage() {
       return
     }
     setVectores(vectores.filter((v) => v.id !== id))
+    
+    // Mostrar nota guiada
+    mostrarNota(`🗑️ Vector ${id} eliminado. Esto significa que has removido un vector de tu conjunto, reduciendo el número de vectores disponibles para operaciones.`)
   }
 
   const actualizarVector = (id: string, campo: "x" | "y" | "z", valor: string) => {
     setVectores(vectores.map((v) => (v.id === id ? { ...v, [campo]: valor } : v)))
+    
+    // Mostrar nota guiada
+    if (modoGuiado && valor) {
+      const componente = campo.toUpperCase()
+      mostrarNota(`📝 Componente ${componente} del Vector ${id}: ${valor}. Esto significa que has modificado la ${componente === 'X' ? 'horizontal' : componente === 'Y' ? 'vertical' : 'profundidad'} del vector.`)
+    }
   }
 
   const limpiarVisualizacion = () => {
@@ -630,6 +651,30 @@ export default function VectoresPage() {
                   <div className="text-xs text-gray-500 mt-2">
                     Estado del canvas: {renderer ? "✅ Listo" : "⏳ Inicializando..."}
                   </div>
+                  
+                  {/* Modo Guiado */}
+                  <div className="mt-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Lightbulb className="h-4 w-4 text-yellow-500" />
+                      <span className="text-sm font-medium">Modo Guiado</span>
+                    </div>
+                    <Button
+                      onClick={() => setModoGuiado(!modoGuiado)}
+                      variant={modoGuiado ? "default" : "outline"}
+                      size="sm"
+                    >
+                      {modoGuiado ? "Desactivar" : "Activar"}
+                    </Button>
+                  </div>
+                  
+                  {notaActual && (
+                    <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <HelpCircle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-yellow-800">{notaActual}</p>
+                      </div>
+                    </div>
+                  )}
                 </CardHeader>
                 <CardContent>
                   <div className="flex justify-center">
@@ -808,6 +853,9 @@ export default function VectoresPage() {
                               step="0.1"
                               className="h-8 text-sm"
                             />
+                            {modoGuiado && (
+                              <p className="text-xs text-gray-500">💡 Componente horizontal</p>
+                            )}
                           </div>
                           <div className="space-y-1">
                             <Label className="text-xs">Y</Label>
@@ -818,6 +866,9 @@ export default function VectoresPage() {
                               step="0.1"
                               className="h-8 text-sm"
                             />
+                            {modoGuiado && (
+                              <p className="text-xs text-gray-500">💡 Componente vertical</p>
+                            )}
                           </div>
                           <div className="space-y-1">
                             <Label className="text-xs">Z</Label>
@@ -828,6 +879,9 @@ export default function VectoresPage() {
                               step="0.1"
                               className="h-8 text-sm"
                             />
+                            {modoGuiado && (
+                              <p className="text-xs text-gray-500">💡 Componente de profundidad</p>
+                            )}
                           </div>
                         </div>
                       </div>

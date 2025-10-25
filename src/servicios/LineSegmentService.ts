@@ -116,6 +116,56 @@ export class LineSegmentService {
     }
   }
 
+  // Ecuación continua
+  obtenerEcuacionContinua(segmento: SegmentoRecta): ResultadoSegmento {
+    const v = this.calcularVectorDirector(segmento).resultado as Vector3D
+    const p0 = segmento.puntoInicial
+
+    // Evitar división por cero
+    const componentes = []
+    if (Math.abs(v.x) > 0.001) {
+      componentes.push(`(x - ${p0.x}) / ${v.x}`)
+    }
+    if (Math.abs(v.y) > 0.001) {
+      componentes.push(`(y - ${p0.y}) / ${v.y}`)
+    }
+    if (Math.abs(v.z) > 0.001) {
+      componentes.push(`(z - ${p0.z}) / ${v.z}`)
+    }
+
+    const ecuacion = componentes.length > 0 
+      ? componentes.join(" = ") + " = t"
+      : "No se puede expresar en forma continua (vector director nulo)"
+
+    const pasos = [
+      `Punto inicial P₀: ${p0.toString()}`,
+      `Vector director v: ${v.toString()}`,
+      `Fórmula general: (x - x₀)/vx = (y - y₀)/vy = (z - z₀)/vz = t`,
+    ]
+
+    if (Math.abs(v.x) > 0.001) {
+      pasos.push(`(x - ${p0.x}) / ${v.x} = t`)
+    }
+    if (Math.abs(v.y) > 0.001) {
+      pasos.push(`(y - ${p0.y}) / ${v.y} = t`)
+    }
+    if (Math.abs(v.z) > 0.001) {
+      pasos.push(`(z - ${p0.z}) / ${v.z} = t`)
+    }
+
+    if (componentes.length === 0) {
+      pasos.push(`El vector director es nulo, no se puede expresar en forma continua`)
+    } else {
+      pasos.push(`Ecuación continua: ${ecuacion}`)
+    }
+
+    return {
+      resultado: ecuacion,
+      pasos,
+      explicacion: "La ecuación continua relaciona las coordenadas x, y, z mediante el parámetro t.",
+    }
+  }
+
   // Verificar si un punto está en el segmento
   puntoEnSegmento(segmento: SegmentoRecta, punto: Vector3D, tolerancia = 0.001): ResultadoSegmento {
     const v = this.calcularVectorDirector(segmento).resultado as Vector3D
@@ -207,6 +257,79 @@ export class LineSegmentService {
       resultado: `${puntos.length} puntos generados`,
       pasos,
       explicacion: `El segmento se dividió en ${n} partes iguales generando ${n + 1} puntos.`,
+    }
+  }
+
+  // Obtener información completa del segmento
+  obtenerInformacionCompleta(segmento: SegmentoRecta): ResultadoSegmento {
+    const v = this.calcularVectorDirector(segmento).resultado as Vector3D
+    const p0 = segmento.puntoInicial
+    const longitud = this.calcularLongitud(segmento).resultado as number
+
+    // Ecuación paramétrica
+    const ecuacionParametrica = `P(t) = (${p0.x}, ${p0.y}, ${p0.z}) + t(${v.x}, ${v.y}, ${v.z})`
+    
+    // Ecuación continua
+    const componentes = []
+    if (Math.abs(v.x) > 0.001) {
+      componentes.push(`(x - ${p0.x}) / ${v.x}`)
+    }
+    if (Math.abs(v.y) > 0.001) {
+      componentes.push(`(y - ${p0.y}) / ${v.y}`)
+    }
+    if (Math.abs(v.z) > 0.001) {
+      componentes.push(`(z - ${p0.z}) / ${v.z}`)
+    }
+
+    const ecuacionContinua = componentes.length > 0 
+      ? componentes.join(" = ") + " = t"
+      : "No se puede expresar en forma continua"
+
+    const informacion = {
+      vectorDirector: v,
+      longitud: longitud,
+      ecuacionParametrica: ecuacionParametrica,
+      ecuacionContinua: ecuacionContinua,
+      puntoInicial: p0,
+      puntoFinal: segmento.puntoFinal
+    }
+
+    const pasos = [
+      `Segmento AB: ${segmento.toString()}`,
+      `Punto inicial A: ${p0.toString()}`,
+      `Punto final B: ${segmento.puntoFinal.toString()}`,
+      `Vector director v = B - A: ${v.toString()}`,
+      `Longitud del segmento: ${longitud.toFixed(4)}`,
+      ``,
+      `Ecuación paramétrica:`,
+      `  P(t) = P₀ + tv`,
+      `  P(t) = (${p0.x}, ${p0.y}, ${p0.z}) + t(${v.x}, ${v.y}, ${v.z})`,
+      `  Donde t ∈ [0, 1]`,
+      ``,
+      `Ecuación continua:`,
+      `  (x - x₀)/vx = (y - y₀)/vy = (z - z₀)/vz = t`,
+    ]
+
+    if (Math.abs(v.x) > 0.001) {
+      pasos.push(`  (x - ${p0.x}) / ${v.x} = t`)
+    }
+    if (Math.abs(v.y) > 0.001) {
+      pasos.push(`  (y - ${p0.y}) / ${v.y} = t`)
+    }
+    if (Math.abs(v.z) > 0.001) {
+      pasos.push(`  (z - ${p0.z}) / ${v.z} = t`)
+    }
+
+    if (componentes.length > 0) {
+      pasos.push(`  ${ecuacionContinua}`)
+    } else {
+      pasos.push(`  No se puede expresar (vector director nulo)`)
+    }
+
+    return {
+      resultado: informacion,
+      pasos,
+      explicacion: "Información completa del segmento incluyendo vector director y ambas formas de ecuación.",
     }
   }
 }

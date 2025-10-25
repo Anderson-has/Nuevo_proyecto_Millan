@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, BookOpen, Calculator, Plus, Trash2, RotateCcw, ZoomIn, ZoomOut } from "lucide-react"
+import { ArrowLeft, BookOpen, Calculator, Plus, Trash2, RotateCcw, ZoomIn, ZoomOut, Lightbulb, HelpCircle } from "lucide-react"
 import { OrthonormalizationService } from "@/src/servicios/OrthonormalizationService"
 import { Vector3D } from "@/src/entidades/Vector3D"
 import { CanvasRenderer } from "@/src/presentacion/CanvasRenderer"
@@ -38,6 +38,8 @@ export default function OrtonormalizacionPage() {
     { id: "2", x: "2", y: "2", z: "0", color: COLORS[1] },
   ])
   const [resultado, setResultado] = useState<any>(null)
+  const [modoGuiado, setModoGuiado] = useState(false)
+  const [notaActual, setNotaActual] = useState("")
   
   // Controles de visualización 3D
   const [rotacionX, setRotacionX] = useState(0)
@@ -111,6 +113,13 @@ export default function OrtonormalizacionPage() {
     }
   }, [rotacionX, rotacionY, rotacionZ, zoom, resultado, renderer])
 
+  const mostrarNota = (nota: string) => {
+    if (modoGuiado) {
+      setNotaActual(nota)
+      setTimeout(() => setNotaActual(""), 3000)
+    }
+  }
+
   const agregarVector = () => {
     if (vectores.length >= 3) {
       alert("Máximo 3 vectores permitidos")
@@ -118,6 +127,9 @@ export default function OrtonormalizacionPage() {
     }
     const nuevoId = (Math.max(...vectores.map((v) => Number.parseInt(v.id))) + 1).toString()
     setVectores([...vectores, { id: nuevoId, x: "", y: "", z: "", color: COLORS[vectores.length % COLORS.length] }])
+    
+    // Mostrar nota guiada
+    mostrarNota(`➕ Vector ${nuevoId} agregado. Esto significa que has añadido un nuevo vector a tu conjunto para aplicar el proceso de Gram-Schmidt y obtener vectores ortonormales.`)
   }
 
   const eliminarVector = (id: string) => {
@@ -126,10 +138,19 @@ export default function OrtonormalizacionPage() {
       return
     }
     setVectores(vectores.filter((v) => v.id !== id))
+    
+    // Mostrar nota guiada
+    mostrarNota(`🗑️ Vector ${id} eliminado. Esto significa que has removido un vector de tu conjunto, reduciendo el número de vectores para el proceso de Gram-Schmidt.`)
   }
 
   const actualizarVector = (id: string, campo: "x" | "y" | "z", valor: string) => {
     setVectores(vectores.map((v) => (v.id === id ? { ...v, [campo]: valor } : v)))
+    
+    // Mostrar nota guiada
+    if (modoGuiado && valor) {
+      const componente = campo.toUpperCase()
+      mostrarNota(`📝 Componente ${componente} del Vector ${id}: ${valor}. Esto significa que has modificado la ${componente === 'X' ? 'horizontal' : componente === 'Y' ? 'vertical' : 'profundidad'} del vector para el proceso de Gram-Schmidt.`)
+    }
   }
 
   const crearVector = (v: VectorInput): Vector3D | null => {
@@ -412,6 +433,30 @@ export default function OrtonormalizacionPage() {
                       <div className="text-xs text-gray-500 mt-2 text-center">
                         Estado del canvas: {renderer ? "✅ Listo" : "⏳ Inicializando..."}
                       </div>
+                      
+                      {/* Modo Guiado */}
+                      <div className="mt-4 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Lightbulb className="h-4 w-4 text-yellow-500" />
+                          <span className="text-sm font-medium">Modo Guiado</span>
+                        </div>
+                        <Button
+                          onClick={() => setModoGuiado(!modoGuiado)}
+                          variant={modoGuiado ? "default" : "outline"}
+                          size="sm"
+                        >
+                          {modoGuiado ? "Desactivar" : "Activar"}
+                        </Button>
+                      </div>
+                      
+                      {notaActual && (
+                        <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                          <div className="flex items-start gap-2">
+                            <HelpCircle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                            <p className="text-sm text-yellow-800">{notaActual}</p>
+                          </div>
+                        </div>
+                      )}
                       
                       {/* Controles de visualización 3D */}
                       <div className="mt-6 space-y-4">
