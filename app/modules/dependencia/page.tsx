@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, BookOpen, Calculator, Plus, Trash2 } from "lucide-react"
+import { ArrowLeft, BookOpen, Calculator, Plus, Trash2, RotateCcw } from "lucide-react"
 import { VectorOperationsService } from "@/src/servicios/VectorOperationsService"
 import { Vector3D } from "@/src/entidades/Vector3D"
 import { CanvasRenderer } from "@/src/presentacion/CanvasRenderer"
@@ -98,6 +98,26 @@ export default function DependenciaPage() {
       return null
     }
     return new Vector3D(x, y, z, `V${v.id}`)
+  }
+
+  const limpiarTodo = () => {
+    // Reiniciar vectores a estado inicial
+    setVectores([
+      { id: "1", x: "1", y: "0", z: "0", color: COLORS[0] },
+      { id: "2", x: "0", y: "1", z: "0", color: COLORS[1] },
+    ])
+    
+    // Limpiar resultado
+    setResultado(null)
+    
+    // Limpiar canvas
+    if (renderer) {
+      renderer.limpiar()
+      renderer.renderizarEscena()
+      console.log("Canvas limpiado y reiniciado")
+    }
+    
+    console.log("Todo limpiado - vectores reiniciados a estado inicial")
   }
 
   const verificarDependencia = () => {
@@ -457,61 +477,72 @@ export default function DependenciaPage() {
                     <CardHeader>
                       <CardTitle>Análisis</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-2">
+                    <CardContent className="space-y-3">
                       <Button onClick={verificarDependencia} className="w-full">
                         Verificar Dependencia Lineal
                       </Button>
-                      <Button 
-                        onClick={() => {
-                          if (canvasRef.current) {
-                            console.log("Canvas dependencia encontrado:", canvasRef.current)
-                            const canvas = canvasRef.current
-                            const ctx = canvas.getContext('2d')
-                            
-                            if (ctx) {
-                              console.log("Contexto 2D obtenido para dependencia")
-                              // Dibujar algo básico para verificar que el canvas funciona
-                              ctx.fillStyle = '#f0f0f0'
-                              ctx.fillRect(0, 0, 600, 600)
+                      
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button 
+                          onClick={limpiarTodo}
+                          variant="outline"
+                          className="w-full"
+                        >
+                          <RotateCcw className="mr-2 h-4 w-4" />
+                          Limpiar Todo
+                        </Button>
+                        <Button 
+                          onClick={() => {
+                            if (canvasRef.current) {
+                              console.log("Canvas dependencia encontrado:", canvasRef.current)
+                              const canvas = canvasRef.current
+                              const ctx = canvas.getContext('2d')
                               
-                              ctx.strokeStyle = '#000000'
-                              ctx.lineWidth = 2
-                              ctx.beginPath()
-                              ctx.moveTo(0, 300)
-                              ctx.lineTo(600, 300)
-                              ctx.moveTo(300, 0)
-                              ctx.lineTo(300, 600)
-                              ctx.stroke()
-                              
-                              ctx.fillStyle = '#000000'
-                              ctx.font = '16px Arial'
-                              ctx.fillText('Canvas dependencia funcionando', 200, 280)
-                              ctx.fillText('X', 580, 290)
-                              ctx.fillText('Y', 310, 20)
-                              
-                              console.log("Dibujo básico dependencia completado")
-                              
-                              // Ahora intentar con el renderer
-                              try {
-                                const newRenderer = new CanvasRenderer(canvas)
-                                newRenderer.renderizarEscena()
-                                setRenderer(newRenderer)
-                                console.log("Plano cartesiano renderizado con renderer")
-                              } catch (error) {
-                                console.error("Error al renderizar plano cartesiano:", error)
+                              if (ctx) {
+                                console.log("Contexto 2D obtenido para dependencia")
+                                // Dibujar algo básico para verificar que el canvas funciona
+                                ctx.fillStyle = '#f0f0f0'
+                                ctx.fillRect(0, 0, 600, 600)
+                                
+                                ctx.strokeStyle = '#000000'
+                                ctx.lineWidth = 2
+                                ctx.beginPath()
+                                ctx.moveTo(0, 300)
+                                ctx.lineTo(600, 300)
+                                ctx.moveTo(300, 0)
+                                ctx.lineTo(300, 600)
+                                ctx.stroke()
+                                
+                                ctx.fillStyle = '#000000'
+                                ctx.font = '16px Arial'
+                                ctx.fillText('Canvas dependencia funcionando', 200, 280)
+                                ctx.fillText('X', 580, 290)
+                                ctx.fillText('Y', 310, 20)
+                                
+                                console.log("Dibujo básico dependencia completado")
+                                
+                                // Ahora intentar con el renderer
+                                try {
+                                  const newRenderer = new CanvasRenderer(canvas)
+                                  newRenderer.renderizarEscena()
+                                  setRenderer(newRenderer)
+                                  console.log("Plano cartesiano renderizado con renderer")
+                                } catch (error) {
+                                  console.error("Error al renderizar plano cartesiano:", error)
+                                }
+                              } else {
+                                console.log("No se pudo obtener contexto 2D para dependencia")
                               }
                             } else {
-                              console.log("No se pudo obtener contexto 2D para dependencia")
+                              console.log("Canvas dependencia no encontrado")
                             }
-                          } else {
-                            console.log("Canvas dependencia no encontrado")
-                          }
-                        }} 
-                        variant="outline"
-                        className="w-full"
-                      >
-                        Debug Canvas
-                      </Button>
+                          }} 
+                          variant="outline"
+                          size="sm"
+                        >
+                          Debug Canvas
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
 
