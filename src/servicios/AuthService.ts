@@ -3,7 +3,7 @@
  * RESPONSABILIDAD ÚNICA: Gestionar la lógica de autenticación
  * RAZÓN PARA CAMBIAR: Solo si cambian las reglas de autenticación
  */
-import { Usuario } from "../entidades/Usuario"
+import { Usuario, RolUsuario } from "../entidades/Usuario"
 
 export interface CredencialesLogin {
   email: string
@@ -16,6 +16,7 @@ export interface DatosRegistro {
   email: string
   password: string
   semestre: number
+  rol: RolUsuario
 }
 
 export class AuthService {
@@ -85,7 +86,7 @@ export class AuthService {
   // Crear usuario desde datos de registro
   crearUsuario(datos: DatosRegistro): Usuario {
     const id = this.generarId()
-    return new Usuario(id, datos.nombre, datos.apellidos, datos.email, datos.semestre, new Date())
+    return new Usuario(id, datos.nombre, datos.apellidos, datos.email, datos.semestre, new Date(), datos.rol)
   }
 
   // Generar ID único

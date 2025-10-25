@@ -22,6 +22,9 @@ interface VectorInput {
   y: string
   z: string
   color: string
+  origenX: number
+  origenY: number
+  isDragging?: boolean
 }
 
 const COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#14B8A6", "#F97316"]
@@ -34,9 +37,12 @@ export default function VectoresPage() {
   const [service] = useState(() => new VectorOperationsService())
 
   const [vectores, setVectores] = useState<VectorInput[]>([
-    { id: "1", x: "", y: "", z: "", color: COLORS[0] },
-    { id: "2", x: "", y: "", z: "", color: COLORS[1] },
+    { id: "1", x: "", y: "", z: "", color: COLORS[0], origenX: 0, origenY: 0 },
+    { id: "2", x: "", y: "", z: "", color: COLORS[1], origenX: 0, origenY: 0 },
   ])
+  const [modoInteractivo, setModoInteractivo] = useState(false)
+  const [vectorSeleccionado, setVectorSeleccionado] = useState<string | null>(null)
+  const [puntoArrastrando, setPuntoArrastrando] = useState<{x: number, y: number} | null>(null)
   const [resultado, setResultado] = useState<Vector3D | number | null>(null)
   const [pasos, setPasos] = useState<string[]>([])
   const [operacion, setOperacion] = useState<string>("suma")
@@ -79,7 +85,15 @@ export default function VectoresPage() {
       return
     }
     const nuevoId = (Math.max(...vectores.map((v) => Number.parseInt(v.id))) + 1).toString()
-    setVectores([...vectores, { id: nuevoId, x: "", y: "", z: "", color: COLORS[vectores.length % COLORS.length] }])
+    setVectores([...vectores, { 
+      id: nuevoId, 
+      x: "", 
+      y: "", 
+      z: "", 
+      color: COLORS[vectores.length % COLORS.length],
+      origenX: 0,
+      origenY: 0
+    }])
   }
 
   const eliminarVector = (id: string) => {
@@ -103,18 +117,137 @@ export default function VectoresPage() {
     
     // Limpiar todos los vectores
     setVectores([
-      { id: "1", x: "", y: "", z: "", color: COLORS[0] },
-      { id: "2", x: "", y: "", z: "", color: COLORS[1] },
+      { id: "1", x: "", y: "", z: "", color: COLORS[0], origenX: 0, origenY: 0 },
+      { id: "2", x: "", y: "", z: "", color: COLORS[1], origenX: 0, origenY: 0 },
     ])
     
     // Limpiar el escalar si está en modo escalar
     setEscalar("2")
+    setModoInteractivo(false)
+    setVectorSeleccionado(null)
+  }
+
+  // Funciones para manejar el arrastre de vectores
+  const handleMouseDown = (event: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!modoInteractivo || !renderer) return
+
+    const rect = canvasRef.current?.getBoundingClientRect()
+    if (!rect) return
+
+    const canvasX = event.clientX - rect.left
+    const canvasY = event.clientY - rect.top
+    const coords = renderer.canvasACoordenadas(canvasX, canvasY)
+
+    // Buscar si se hizo clic en algún vector
+    const vectorClickeado = vectores.find(v => {
+      if (!v.x || !v.y) return false
+      const x = parseFloat(v.x)
+      const y = parseFloat(v.y)
+      const distancia = Math.sqrt((coords.x - (v.origenX + x))**2 + (coords.y - (v.origenY + y))**2)
+      return distancia < 0.5 // Radio de detección
+    })
+
+    if (vectorClickeado) {
+      setVectorSeleccionado(vectorClickeado.id)
+      setPuntoArrastrando({ x: coords.x, y: coords.y })
+    }
+  }
+
+  const handleMouseMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!modoInteractivo || !vectorSeleccionado || !puntoArrastrando || !renderer) return
+
+    const rect = canvasRef.current?.getBoundingClientRect()
+    if (!rect) return
+
+    const canvasX = event.clientX - rect.left
+    const canvasY = event.clientY - rect.top
+    const coords = renderer.canvasACoordenadas(canvasX, canvasY)
+
+    // Actualizar la posición del vector
+    setVectores(vectores.map(v => {
+      if (v.id === vectorSeleccionado) {
+        const deltaX = coords.x - puntoArrastrando.x
+        const deltaY = coords.y - puntoArrastrando.y
+        
+        // Calcular las nuevas coordenadas del vector
+        const nuevaX = parseFloat(v.x || "0") + deltaX
+        const nuevaY = parseFloat(v.y || "0") + deltaY
+        
+        return {
+          ...v,
+          x: nuevaX.toFixed(1),
+          y: nuevaY.toFixed(1),
+          origenX: 0, // Mantener origen en (0,0) para modo interactivo
+          origenY: 0
+        }
+      }
+      return v
+    }))
+
+    setPuntoArrastrando({ x: coords.x, y: coords.y })
+    
+    // Actualizar visualización en tiempo real
+    setTimeout(() => {
+      dibujarVectoresInteractivos()
+    }, 10)
+  }
+
+  const handleMouseUp = () => {
+    setVectorSeleccionado(null)
+    setPuntoArrastrando(null)
+  }
+
+  // Función para alternar modo interactivo
+  const toggleModoInteractivo = () => {
+    setModoInteractivo(!modoInteractivo)
+    if (!modoInteractivo) {
+      // Al activar el modo interactivo, reiniciar orígenes y dibujar vectores
+      setVectores(vectores.map(v => ({
+        ...v,
+        origenX: 0,
+        origenY: 0
+      })))
+      // Dibujar los vectores actuales
+      setTimeout(() => {
+        dibujarVectoresInteractivos()
+      }, 100)
+    } else {
+      // Al desactivar el modo interactivo, limpiar la selección
+      setVectorSeleccionado(null)
+      setPuntoArrastrando(null)
+    }
+  }
+
+  // Función para dibujar vectores en modo interactivo
+  const dibujarVectoresInteractivos = () => {
+    if (!renderer) return
+
+    renderer.renderizarEscena()
+    
+    vectores.forEach(v => {
+      if (v.x && v.y) {
+        const x = parseFloat(v.x)
+        const y = parseFloat(v.y)
+        const z = parseFloat(v.z || "0")
+        const vector = new Vector3D(x, y, z, `V${v.id}`)
+        // En modo interactivo, siempre dibujar desde el origen (0,0)
+        const origen = new Vector3D(0, 0, 0)
+        renderer.dibujarVector(vector, v.color, origen)
+      }
+    })
   }
 
   // Limpiar visualización cuando cambie la operación
   useEffect(() => {
     limpiarVisualizacion()
   }, [operacion])
+
+  // Actualizar visualización cuando cambien los vectores en modo interactivo
+  useEffect(() => {
+    if (modoInteractivo && renderer) {
+      dibujarVectoresInteractivos()
+    }
+  }, [vectores, modoInteractivo])
 
   const crearVector = (v: VectorInput): Vector3D | null => {
     const x = Number.parseFloat(v.x)
@@ -481,6 +614,19 @@ export default function VectoresPage() {
                     {operacion === "punto" && "Producto punto: se muestran los dos vectores (resultado es un escalar)"}
                     {operacion === "cruz" && "Producto cruz: se muestran los vectores originales y el vector perpendicular resultante"}
                   </CardDescription>
+                  {modoInteractivo && (
+                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm text-blue-800">
+                        <strong>Modo Interactivo:</strong> Haz clic y arrastra los vectores para moverlos. 
+                        Los campos X, Y se actualizarán automáticamente mientras arrastras.
+                      </p>
+                      {vectorSeleccionado && (
+                        <p className="text-xs text-blue-600 mt-1">
+                          ✨ Arrastrando Vector {vectores.findIndex(v => v.id === vectorSeleccionado) + 1} - Los valores se actualizan en tiempo real
+                        </p>
+                      )}
+                    </div>
+                  )}
                   <div className="text-xs text-gray-500 mt-2">
                     Estado del canvas: {renderer ? "✅ Listo" : "⏳ Inicializando..."}
                   </div>
@@ -491,9 +637,76 @@ export default function VectoresPage() {
                       ref={canvasRef}
                       width={600}
                       height={600}
-                      className="border-2 border-gray-300 rounded-lg bg-white shadow-lg"
+                      className={`border-2 rounded-lg bg-white shadow-lg ${
+                        modoInteractivo 
+                          ? 'border-blue-500 cursor-move' 
+                          : 'border-gray-300 cursor-default'
+                      }`}
                       style={{ width: '600px', height: '600px' }}
+                      onMouseDown={handleMouseDown}
+                      onMouseMove={handleMouseMove}
+                      onMouseUp={handleMouseUp}
+                      onMouseLeave={handleMouseUp}
                     />
+                  </div>
+                  <div className="mt-4 flex justify-center flex-wrap gap-2">
+                    <Button
+                      onClick={toggleModoInteractivo}
+                      variant={modoInteractivo ? "default" : "outline"}
+                    >
+                      {modoInteractivo ? "Desactivar Arrastre" : "Activar Arrastre"}
+                    </Button>
+                    {modoInteractivo && (
+                      <>
+                        <Button
+                          onClick={dibujarVectoresInteractivos}
+                          variant="outline"
+                        >
+                          Actualizar Vista
+                        </Button>
+                        {operacion === "suma" && (
+                          <Button
+                            onClick={() => {
+                              if (renderer && vectores.length >= 2) {
+                                renderer.renderizarEscena()
+                                // Dibujar paralelogramo para suma
+                                const v1 = vectores[0]
+                                const v2 = vectores[1]
+                                if (v1.x && v1.y && v2.x && v2.y) {
+                                  const x1 = parseFloat(v1.x)
+                                  const y1 = parseFloat(v1.y)
+                                  const x2 = parseFloat(v2.x)
+                                  const y2 = parseFloat(v2.y)
+                                  
+                                  // Dibujar vectores desde el origen
+                                  const vector1 = new Vector3D(x1, y1, 0, "V1")
+                                  const vector2 = new Vector3D(x2, y2, 0, "V2")
+                                  renderer.dibujarVector(vector1, v1.color)
+                                  renderer.dibujarVector(vector2, v2.color)
+                                  
+                                  // Dibujar paralelogramo
+                                  const origen = new Vector3D(0, 0, 0)
+                                  const p1 = new Vector3D(x1, y1, 0)
+                                  const p2 = new Vector3D(x2, y2, 0)
+                                  const p3 = new Vector3D(x1 + x2, y1 + y2, 0)
+                                  
+                                  // Líneas del paralelogramo
+                                  renderer.dibujarSegmento(p1, p3, "#888888", 1)
+                                  renderer.dibujarSegmento(p2, p3, "#888888", 1)
+                                  
+                                  // Vector resultante
+                                  const resultado = new Vector3D(x1 + x2, y1 + y2, 0, "Resultado")
+                                  renderer.dibujarVector(resultado, "#000000")
+                                }
+                              }
+                            }}
+                            variant="secondary"
+                          >
+                            Regla del Paralelogramo
+                          </Button>
+                        )}
+                      </>
+                    )}
                   </div>
                   <div className="mt-4 flex flex-wrap gap-3 justify-center text-sm">
                     {vectores.map((v, i) => (
@@ -734,6 +947,17 @@ export default function VectoresPage() {
                   <CardTitle>Teoría Rápida</CardTitle>
                 </CardHeader>
                 <CardContent className="text-sm space-y-2">
+                  {modoInteractivo && (
+                    <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="font-medium text-green-900 mb-2">Modo Interactivo Activo:</p>
+                      <ul className="text-green-800 text-xs space-y-1">
+                        <li>• Haz clic y arrastra los vectores para moverlos</li>
+                        <li>• Experimenta con diferentes posiciones</li>
+                        <li>• Usa "Regla del Paralelogramo" para visualizar sumas</li>
+                        <li>• Ajusta las posiciones para entender mejor las operaciones</li>
+                      </ul>
+                    </div>
+                  )}
                   {operacion === "suma" && (
                     <>
                       <p className="font-medium">Suma de Vectores:</p>

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { ProtectedRoute } from "@/components/protected-route"
+import { DashboardDocente } from "@/components/dashboard-docente"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { BookOpen, LogOut, Trophy, Calculator, TrendingUp, Ruler, GitBranch, Sparkles } from "lucide-react"
@@ -14,6 +15,11 @@ export default function DashboardPage() {
   const handleLogout = () => {
     logout()
     router.push("/login")
+  }
+
+  // Si el usuario es docente, mostrar el dashboard de docente
+  if (usuario?.rol === 'docente') {
+    return <DashboardDocente />
   }
 
   const modules = [

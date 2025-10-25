@@ -157,4 +157,35 @@ export class AppController {
     this.progresoRepo.guardarProgreso(progreso)
     this.progresoActual = progreso
   }
+
+  // Obtener todos los estudiantes (solo para docentes)
+  obtenerTodosLosEstudiantes(): Usuario[] {
+    if (this.usuarioActual?.rol !== 'docente') {
+      throw new Error("Solo los docentes pueden acceder a esta funcionalidad")
+    }
+    
+    // En una implementación real, esto consultaría la base de datos
+    // Por ahora, retornamos una lista vacía
+    return []
+  }
+
+  // Eliminar estudiante (solo para docentes)
+  eliminarEstudiante(estudianteId: string): boolean {
+    if (this.usuarioActual?.rol !== 'docente') {
+      throw new Error("Solo los docentes pueden eliminar estudiantes")
+    }
+    
+    // En una implementación real, esto eliminaría el usuario de la base de datos
+    // Por ahora, retornamos true
+    return true
+  }
+
+  // Obtener progreso de un estudiante específico (solo para docentes)
+  obtenerProgresoEstudiante(estudianteId: string): Progreso | null {
+    if (this.usuarioActual?.rol !== 'docente') {
+      throw new Error("Solo los docentes pueden ver el progreso de estudiantes")
+    }
+    
+    return this.progresoRepo.obtenerProgreso(estudianteId)
+  }
 }

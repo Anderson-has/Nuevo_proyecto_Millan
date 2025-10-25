@@ -41,8 +41,13 @@ export default function LoginPage() {
     }
   }
 
-  const usarCredencialesPrueba = () => {
+  const usarCredencialesEstudiante = () => {
     setEmail("estudiante@empanadas.com")
+    setPassword("123456")
+  }
+
+  const usarCredencialesDocente = () => {
+    setEmail("docente@empanadas.com")
     setPassword("123456")
   }
 
@@ -60,25 +65,47 @@ export default function LoginPage() {
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
-            <Alert className="bg-blue-50 border-blue-200">
-              <AlertDescription className="text-sm">
-                <strong className="font-semibold">Usuario de prueba:</strong>
-                <br />
-                Email: <code className="bg-blue-100 px-1 rounded">estudiante@empanadas.com</code>
-                <br />
-                Contraseña: <code className="bg-blue-100 px-1 rounded">123456</code>
-                <br />
-                <Button
-                  type="button"
-                  variant="link"
-                  size="sm"
-                  className="h-auto p-0 mt-1 text-blue-600"
-                  onClick={usarCredencialesPrueba}
-                >
-                  Usar estas credenciales
-                </Button>
-              </AlertDescription>
-            </Alert>
+            <div className="space-y-3">
+              <Alert className="bg-blue-50 border-blue-200">
+                <AlertDescription className="text-sm">
+                  <strong className="font-semibold">Estudiante de prueba:</strong>
+                  <br />
+                  Email: <code className="bg-blue-100 px-1 rounded">estudiante@empanadas.com</code>
+                  <br />
+                  Contraseña: <code className="bg-blue-100 px-1 rounded">123456</code>
+                  <br />
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0 mt-1 text-blue-600"
+                    onClick={usarCredencialesEstudiante}
+                  >
+                    Usar estas credenciales
+                  </Button>
+                </AlertDescription>
+              </Alert>
+
+              <Alert className="bg-green-50 border-green-200">
+                <AlertDescription className="text-sm">
+                  <strong className="font-semibold">Docente de prueba:</strong>
+                  <br />
+                  Email: <code className="bg-green-100 px-1 rounded">docente@empanadas.com</code>
+                  <br />
+                  Contraseña: <code className="bg-green-100 px-1 rounded">123456</code>
+                  <br />
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0 mt-1 text-green-600"
+                    onClick={usarCredencialesDocente}
+                  >
+                    Usar estas credenciales
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            </div>
 
             {error && (
               <Alert variant="destructive">

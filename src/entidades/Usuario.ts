@@ -3,6 +3,8 @@
  * RESPONSABILIDAD ÚNICA: Representar los datos de un usuario del sistema
  * RAZÓN PARA CAMBIAR: Solo si cambia la estructura de datos del usuario
  */
+export type RolUsuario = 'estudiante' | 'docente'
+
 export class Usuario {
   constructor(
     public readonly id: string,
@@ -11,6 +13,7 @@ export class Usuario {
     public readonly email: string,
     public readonly semestre: number,
     public readonly fechaRegistro: Date,
+    public readonly rol: RolUsuario,
   ) {}
 
   // Método de utilidad para obtener nombre completo
@@ -27,6 +30,7 @@ export class Usuario {
       email: this.email,
       semestre: this.semestre,
       fechaRegistro: this.fechaRegistro.toISOString(),
+      rol: this.rol,
     }
   }
 
@@ -39,6 +43,7 @@ export class Usuario {
       data.email as string,
       data.semestre as number,
       new Date(data.fechaRegistro as string),
+      (data.rol as RolUsuario) || 'estudiante', // Default a estudiante si no existe
     )
   }
 }
