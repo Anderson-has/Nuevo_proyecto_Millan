@@ -36,21 +36,86 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [controller])
 
   const login = async (credenciales: CredencialesLogin): Promise<ResultadoAuth> => {
-    const resultado = await controller.login(credenciales)
-    if (resultado.exito && resultado.usuario) {
-      setUsuario(resultado.usuario)
-      setProgreso(controller.obtenerProgresoActual())
+    // Usar la API de Spring Boot en lugar del controlador local
+    try {
+      const { apiClient } = await import('./api-client')
+      
+      // Convertir las credenciales al formato que espera la API
+      const response = await apiClient.login({
+        usernameOrEmail: credenciales.email,
+        password: credenciales.password,
+      })
+
+      // Si llega aquí, el login fue exitoso
+      // TODO: Necesitamos obtener los datos del usuario desde el token JWT
+      const usuario = {
+        id: '', // TODO: extraer del token
+        nombre: credenciales.email.split('@')[0],
+        apellidos: '',
+        email: credenciales.email,
+        semestre: 1,
+        fechaRegistro: new Date(),
+        rol: 'estudiante' as const,
+      }
+
+      // Actualizar el estado del usuario
+      setUsuario(usuario as any)
+      setProgreso(null) // TODO: cargar progreso real desde la API
+
+      return {
+        exito: true,
+        usuario: usuario as any,
+      }
+    } catch (error: any) {
+      console.error('Error al iniciar sesión:', error)
+      return {
+        exito: false,
+        mensaje: error.message || 'Error al iniciar sesión',
+      }
     }
-    return resultado
   }
 
   const registrar = async (datos: DatosRegistro): Promise<ResultadoAuth> => {
-    const resultado = await controller.registrar(datos)
-    if (resultado.exito && resultado.usuario) {
-      setUsuario(resultado.usuario)
-      setProgreso(controller.obtenerProgresoActual())
+    // Usar la API de Spring Boot en lugar del controlador local
+    try {
+      const { apiClient } = await import('./api-client')
+      
+      // Convertir los datos al formato que espera la API
+      const response = await apiClient.register({
+        email: datos.email,
+        password: datos.password,
+        firstName: datos.nombre,
+        lastName: datos.apellidos,
+        semester: datos.semestre,
+        type: datos.rol === 'docente' ? 'DOCENTE' : 'ESTUDIANTE',
+      })
+
+      // Si llega aquí, el registro fue exitoso
+      const usuario = {
+        id: response.id?.toString() || '',
+        nombre: response.username || datos.nombre,
+        apellidos: datos.apellidos,
+        email: datos.email,
+        semestre: datos.semestre,
+        fechaRegistro: new Date(),
+        rol: datos.rol,
+      } as any
+
+      // Actualizar el estado del usuario
+      setUsuario(usuario)
+      setProgreso(null) // TODO: cargar progreso real desde la API
+
+      return {
+        exito: true,
+        usuario,
+      }
+    } catch (error: any) {
+      console.error('Error al registrar:', error)
+      return {
+        exito: false,
+        mensaje: error.message || 'Error al registrarse',
+      }
     }
-    return resultado
   }
 
   const logout = () => {
